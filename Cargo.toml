@@ -1,0 +1,45 @@
+[package]
+name = "icloud-cli"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+license = "MIT"
+description = "Agent-first CLI for iCloud Calendar (read/write), Contacts and Mail (read-only) using app-specific passwords"
+repository = "https://github.com/BB-fat/icloud-cli"
+readme = "README.md"
+keywords = ["icloud", "caldav", "carddav", "imap", "agent"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "icloud"
+path = "src/main.rs"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[dependencies]
+async-imap = { version = "0.12.0", default-features = false, features = ["runtime-tokio"] }
+base64 = "0.23.1"
+chrono = "0.4.45"
+chrono-tz = "0.10"
+clap = { version = "4.6.7", features = ["derive", "env"] }
+dirs = "7.0.0"
+futures = "0.3.34"
+hex = "0.4.3"
+jiff = "0.2.38"
+keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native"] }
+mail-parser = "0.11.9"
+percent-encoding = "2.3.2"
+quick-xml = "0.37"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2"] }
+rrule = "0.14.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
+sha2 = "0.11.1"
+tokio = { version = "1.53.3", features = ["rt", "macros", "net", "time", "io-util", "process"] }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+toml = "1.1.8"
+uuid = { version = "1.28.0", features = ["v4"] }
+webpki-roots = "1.0.9"
