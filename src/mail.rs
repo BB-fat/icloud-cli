@@ -114,7 +114,7 @@ async fn connect(ctx: &Ctx) -> Result<Sess> {
         tokio::net::TcpStream::connect((host.as_str(), port)),
     )
     .await
-    .map_err(|_| AppError::new("E_TIMEOUT", "IMAP connect timed out"))?
+    .map_err(|_| AppError::new("E_TIMEOUT", format!("IMAP connect to {host}:{port} timed out")).hint("Outbound TCP port 993 may be blocked in this environment (sandbox/firewall). Calendar and contacts use HTTPS 443 and are unaffected."))?
     .map_err(|e| AppError::new("E_NETWORK", format!("IMAP connect failed: {e}")))?;
     let stream: Pin<Box<dyn Io>> = if tls {
         let mut roots = tokio_rustls::rustls::RootCertStore::empty();

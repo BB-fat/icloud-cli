@@ -319,7 +319,18 @@ async fn auth(ctx: &mut Ctx, cmd: &AuthCmd) -> Result<Out> {
                     ctx.profile.region = Some(r.into());
                     match verify(ctx).await {
                         Ok(v) => {
-                            detected = r.into();
+                            // China-mainland accounts can authenticate on the global endpoint but live on
+                            // pXX-*.icloud.com.cn shards; their CardDAV/IMAP must then use the .cn endpoints.
+                            let on_cn = v["caldav"]["calendar_home"]
+                                .as_str()
+                                .and_then(|h| reqwest::Url::parse(h).ok())
+                                .and_then(|u| u.host_str().map(|h| h.ends_with(".com.cn")))
+                                .unwrap_or(false);
+                            detected = if on_cn && region == "auto" {
+                                "cn".into()
+                            } else {
+                                r.into()
+                            };
                             verification = v;
                             last_err = None;
                             break;
