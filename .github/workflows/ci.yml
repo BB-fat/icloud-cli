@@ -1,0 +1,67 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: "rustfmt, clippy" }
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets -- -D warnings
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      greenmail:
+        image: greenmail/standalone:2.1.3
+        ports: ["3025:3025", "3143:3143"]
+        env:
+          GREENMAIL_OPTS: "-Dgreenmail.setup.test.smtp -Dgreenmail.setup.test.imap -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.users=test:app-pass-1234@icloud.com -Dgreenmail.users.login=email -Dgreenmail.verbose"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test
+      - run: cargo build
+      - name: Start Radicale
+        run: |
+          pip install radicale==3.*
+          python -m radicale --config tests/e2e/radicale.conf > /tmp/radicale.log 2>&1 &
+          for i in $(seq 1 30); do curl -s -o /dev/null http://127.0.0.1:5232/ && break; sleep 1; done
+      - name: E2E (Radicale + GreenMail)
+        env:
+          E2E_IMAP: imap://127.0.0.1:3143
+          E2E_SMTP_PORT: "3025"
+        run: tests/e2e/run.sh target/debug/icloud
+      - if: failure()
+        run: cat /tmp/radicale.log || true
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97 # stable - 2
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --locked
+      - run: cargo test --locked
+
+  platforms:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test
+      - run: cargo run -- version
